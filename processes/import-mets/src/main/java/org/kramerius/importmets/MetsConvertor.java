@@ -293,8 +293,9 @@ public class MetsConvertor {
     }
 
     private String getPackageid(File infoFile) {
-        try {
-            Document doc = XMLUtils.parseDocument(new BOMInputStream(new FileInputStream(infoFile)));
+        try (FileInputStream is = new FileInputStream(infoFile);
+                BOMInputStream bis = new BOMInputStream(is)) {
+            Document doc = XMLUtils.parseDocument(bis);
             Element elem = XMLUtils.findElement(doc.getDocumentElement(), "packageid");
             if (elem != null) {
                 return elem.getTextContent();
@@ -307,8 +308,9 @@ public class MetsConvertor {
     }
 
     private String getMetsFilename(File infoFile) {
-        try {
-            Document doc = XMLUtils.parseDocument(new BOMInputStream(new FileInputStream(infoFile)));
+        try (FileInputStream is = new FileInputStream(infoFile);
+                BOMInputStream bis = new BOMInputStream(is)) {
+            Document doc = XMLUtils.parseDocument(bis);
             Element elem = XMLUtils.findElement(doc.getDocumentElement(), "mainmets");
             if (elem != null) {
                 return elem.getTextContent();
@@ -380,8 +382,15 @@ public class MetsConvertor {
                 return new InputSource(new ByteArrayInputStream("<?xml version='1.0' encoding='UTF-8'?>".getBytes()));
             }
         });
-        SAXSource saxSource = new SAXSource(reader, new InputSource(new FileInputStream(importFile)));
-        Object source = unmarshaller.unmarshal(saxSource);
+        SAXSource saxSource;
+        Object source = null;
+        try (FileInputStream is = new FileInputStream(importFile)) {
+            saxSource = new SAXSource(reader, new InputSource(is));
+            source = unmarshaller.unmarshal(saxSource);
+        } catch (IOException ex) {
+            log.error(ex.getMessage(), ex);
+        }
+
         log.info("File " + importFile + " loaded: " + source);
 
 /*
